@@ -6,8 +6,10 @@ import { connect } from "react-redux";
 import { compose } from "redux";
 import { navigate } from "redux-url";
 import { displayFormat } from "../utils/Date";
+import OpenIcon from "react-icons/lib/md/zoom-in";
 import Spinner from "../components/Spinner";
 import Table from "../components/Table";
+import Link from "../components/Link";
 import { Badge } from "../components/Badge";
 import type { JobStatus } from "../../ApplicationState";
 
@@ -17,7 +19,8 @@ type Props = {
   selectedJobs: Array<string>,
   envCritical: boolean,
   sort: Sort,
-  open: (link: string, replace: boolean) => void
+  open: (link: string, replace: boolean) => void,
+  openJob: string
 };
 
 type State = {
@@ -32,7 +35,7 @@ type Sort = {
   order: Order
 };
 
-type Columns = "id" | "name" | "description";
+type Columns = "id" | "name";
 
 type Scheduling = {
   start: string
@@ -47,15 +50,15 @@ type Job = {
 type JobsOrder = (Job, Job) => number;
 
 const columns: Array<{
-  id: Columns | "startDate" | "status",
-  label: string,
+  id: Columns | "startDate" | "status" | "detail",
+  label?: string,
   sortable: boolean
 }> = [
   { id: "id", label: "ID", sortable: true },
   { id: "name", label: "Name", sortable: true },
-  { id: "description", label: "Description", sortable: false },
   { id: "startDate", label: "Start Date", sortable: true },
-  { id: "status", label: "Status", sortable: true }
+  { id: "status", label: "Status", sortable: true },
+  { id: "detail", sortable: false, width: 40 }
 ];
 
 const column2Comp: {
@@ -65,9 +68,6 @@ const column2Comp: {
 } = {
   id: ({ id }: { id: string }) => <span>{id}</span>,
   name: ({ name }: { name: string }) => <span>{name}</span>,
-  description: ({ description }: { description: string }) => (
-    <span>{description}</span>
-  ),
   startDate: ({ scheduling }: { scheduling: Scheduling }) => (
     <span>{displayFormat(new Date(scheduling.start))}</span>
   ),
@@ -186,7 +186,21 @@ class JobsComp extends React.Component<any, Props, State> {
             envCritical={envCritical}
             onSortBy={this.handleSortBy.bind(this)}
             render={(column, row) => {
-              return column2Comp[column](row);
+              switch (column) {
+                case "detail":
+                  return (
+                    <Link
+                      className={classes.openIcon}
+                      href={`/workflow/${row.id}?showDetail=true&refPath=${
+                        location.pathname
+                      }`}
+                    >
+                      <OpenIcon />
+                    </Link>
+                  );
+                default:
+                  return column2Comp[column](row);
+              }
             }}
           />
         ) : (
@@ -277,7 +291,7 @@ const styles = {
 };
 
 const mapStateToProps = (
-  { app: { project, page: { sort, order }, selectedJobs } },
+  { app: { project, page: { sort, order, openJob }, selectedJobs } },
   ownProps
 ) => {
   return {
@@ -287,7 +301,8 @@ const mapStateToProps = (
     },
     selectedJobs,
     envCritical: project.env.critical,
-    status: ownProps.status
+    status: ownProps.status,
+    openJob
   };
 };
 
